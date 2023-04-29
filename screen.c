@@ -537,8 +537,8 @@ updatescreen()
 
     Setcolor(BGND, 0x00f);
 
-    //nexttoscreen();
-    nexttoscreen_fast();
+    nexttoscreen();
+    //nexttoscreen_fast();
 
     Setcolor(BGND, bgnd);
 
