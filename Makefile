@@ -10,7 +10,7 @@ OUT=stevie.ttp
 SDIR = .
 
 $(ODIR)/%.o: $(SDIR)/%.c 
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -g -c -o $@ $<
 
 MACH=	tos.o
 
@@ -30,8 +30,10 @@ LD_FLAGS=-L/opt/cross-mint/lib/gcc/m68k-atari-mint/4.6.4
 
 $(OUT) : $(OBJ)
 	m68k-atari-mint-as font.s -o obj/font.o
-	m68k-atari-mint-ld -o stevie.ttp $(CRT0) $(OBJ) $(ODIR)/font.o $(LD_FLAGS) -lgcc -lc -lgcc --traditional-format
+	m68k-atari-mint-ld -g -Map stevie.map -o stevie.ttp $(CRT0) $(OBJ) $(ODIR)/font.o $(LD_FLAGS) -lgcc -lc -lgcc
+	m68k-atari-mint-objdump --line-numbers --disassemble --source stevie.ttp > stevie.lst
+	m68k-atari-mint-strip stevie.ttp
 
 clean :
-	$(RM) $(ODIR)/*.o  $(OUT)
+	$(RM) $(ODIR)/*.o  $(OUT) stevie.lst stevie.map
 
