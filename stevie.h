@@ -30,8 +30,16 @@
 
 #define LINEOF(x) x->linep->num
 
+#ifndef INLINE
+#ifdef __PUREC__
+#define INLINE
+#else
+#define INLINE inline
+#endif
+#endif
+
 #ifndef NULL
-#define NULL 0
+#define NULL        ((void *)0)
 #endif
 
 #include "param.h"
@@ -41,7 +49,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __PUREC__
+#include <tos.h>
+#else
 #include <osbind.h>
+#endif
 
 typedef int bool_t;
 typedef unsigned short UWORD;
@@ -56,20 +69,20 @@ struct charinfo {
 	char *ch_str;
 };
 
-struct	line {
-	struct	line	*prev, *next;	/* previous and next lines */
+struct	_line {
+	struct	_line	*prev, *next;	/* previous and next lines */
 	char	*s;			/* text for this line */
 	int	size;			/* actual size of space at 's' */
 	unsigned int	num;		/* line "number" */
 }; 
 
-struct	lptr {
-	struct	line	*linep;		/* line we're referencing */
+struct	_lptr {
+	struct	_line	*linep;		/* line we're referencing */
 	int	index;			/* position within that line */
 }; 
 
-typedef	struct line	LINE;
-typedef	struct lptr	LPTR; 
+typedef	struct _line	LINEX;
+typedef	struct _lptr	LPTR;
 
 extern struct charinfo chars[];
 extern int State;
@@ -78,7 +91,7 @@ extern int Columns;
 extern char *Realscreen;
 extern char *Nextscreen;
 extern char *Filename;
-extern LPTR *Filemem;;
+extern LPTR *Filemem;
 extern LPTR *Fileend;
 extern LPTR *Topchar;
 extern LPTR *Botchar;
@@ -106,24 +119,22 @@ extern char *alloc(unsigned size);
 extern LPTR *nextline(LPTR *curr);
 extern LPTR *prevline(LPTR *curr); 
 extern LPTR *coladvance(LPTR *p, int col); 
-static LPTR *ssearch(int dir, char *str);
+extern LPTR *ssearch(int dir, char *str);
 extern LPTR *getmark(char c); 
 extern LPTR *gotoline(int n); 
-extern LINE *newline(int nchars);
-extern LPTR *showmatch();
+extern LINEX *newline(int nchars);
+extern LPTR *showmatch(void);
 extern LPTR *fwd_word(LPTR *p, int type);
 extern LPTR *bck_word(LPTR *p, int type);
 extern LPTR *end_word(LPTR *p, int type);
-extern void updatetabstoptable();
+extern void updatetabstoptable(void);
 
 /* Inlined functions */
 
 /*
  * gchar(lp) - get the character at position "lp"
  */
-static inline int
-gchar(lp)
-register LPTR	*lp;
+static INLINE int gchar(LPTR *lp)
 {
 	return (lp->linep->s[lp->index]);
 }
@@ -134,9 +145,7 @@ register LPTR	*lp;
  * Increment the line pointer 'p' crossing line boundaries as necessary.
  * Return 1 when crossing a line, -1 when at end of file, 0 otherwise.
  */
-static inline int
-inc(lp)
-register LPTR	*lp;
+static INLINE int inc(LPTR *lp)
 {
 	register char *p = &(lp->linep->s[lp->index]);
 
@@ -154,8 +163,109 @@ register LPTR	*lp;
 	return -1;
 }
 
+/* Prototypes */
 
+/* alloc.c */
+bool_t buf1line(void);
+bool_t bufempty(void);
+bool_t canincrease(int n);
+bool_t endofline(LPTR *p);
+void filealloc(void);
+void freeall(void);
+bool_t lineempty(void);
+void screenalloc(void);
 
+/* cmdline.c */
+void emsg(char *s);
+void gotocmd(bool_t clr, char firstc);
+void msg(char *s);
+void readcmdline(int firstc, char *cmdline);
+void smsg(char *s, ...);
+void wait_return(void);
 
+/* edit.c */
+void beginline(bool_t flag);
+void edit(void);
+void getout(void);
+bool_t onedown(int n);
+bool_t oneleft(void);
+bool_t oneright(void);
+bool_t oneup(int n);
+void scrolldown(int nlines);
+void scrollup(int nlines);
 
+/* fileio.c */
+void filemess(char *s);
+bool_t readfile(char *fname, LPTR *fromp, bool_t nochangename);
+void renum(void);
+bool_t writeit(char *fname, LPTR *start, LPTR *end);
 
+/* help.c */
+bool_t help(void);
+
+/* main.c */
+void addtobuff(char *s, ...);
+bool_t anyinput(void);
+void stuffin(char *s);
+void stuffnum(int n);
+int vgetc(void);
+int vpeekc(void);
+
+/* mark.c */
+void clrall(void);
+void clrmark(LINEX *line);
+bool_t setmark(char c);
+void setpcmark(void);
+
+/* misccmds.c */
+int cntllines(LPTR *pbegin, LPTR *pend);
+bool_t delchar(bool_t fixpos);
+void delline(int nlines);
+void fileinfo(void);
+void inschar(int c);
+void insstr(char *s);
+void opencmd(int dir, int can_ai);
+int plines(LPTR *p);
+
+/* normal.c */
+char *mkstr(char c);
+void normal(int c);
+
+/* param.c */
+void doset(char *arg, bool_t inter);
+
+/* ptrfunc.c */
+int dec(LPTR *lp);
+void pchar(LPTR *lp, char c);
+void pswap(LPTR *a, LPTR *b);
+bool_t lt(LPTR *a, LPTR *b);
+bool_t ltoreq(LPTR *a, LPTR *b);
+
+/* screen.c */
+void cursupdate(void);
+void preshiftfont(void);
+void screenclear(void);
+void s_del(int row, int nlines);
+void s_ins(int row, int nlines);
+void updateline(void);
+void updatescreen(void);
+void updatetabstoptable(void);
+
+/* search.c */
+bool_t crepsearch(int flag);
+void dosearch(int dir, char *str);
+bool_t findfunc(int dir);
+void repsearch(int flag);
+bool_t searchc(char c, int dir, int type);
+LPTR *showmatch(void);
+
+/* tos.c */
+void beep(void);
+void my_delay(void);
+FILE *fopenb(char *fname, char *mode);
+int inchar(void);
+void outchar(char c);
+void outstr(char *s);
+void windexit(int r);
+void windgoto(int r, int c);
+void windinit(void);

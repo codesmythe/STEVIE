@@ -8,6 +8,8 @@
  */
 
 #include "stevie.h"
+#include <ctype.h>
+#include <stdarg.h>
 
 static	char	*altfile = NULL;	/* alternate file */
 static	int	altline;		/* line # in alternate file */
@@ -29,15 +31,13 @@ static	bool_t	interactive;	/* TRUE if we're reading a real command line */
 
 #define	CMDSZ	100		/* size of the command buffer */
 
-static	bool_t	doecmd();
-static	void	badcmd(), doshell(), get_range();
-static	LPTR	*get_line();
+static	bool_t doecmd(char *arg, bool_t force);
+static void badcmd(void);
+static void doshell(void);
+static void get_range(char **cp);
+static LPTR *get_line(char **cp);
 
 void dotag(char *tag, bool_t force);
-void gotocmd(bool_t clr, bool_t fresh, bool_t firstc);
-void msg(char *s);
-void emsg(char *s);
-void wait_return();
 
 /*
  * readcmdline() - accept a command line starting with ':', '/', or '?'
@@ -47,11 +47,11 @@ void wait_return();
  * points to a complete command line that should be used. This is used
  * in main() to handle initialization commands in the environment variable
  * "EXINIT".
+ *
+ * Parameter firstc is either ':', '/', or '?'.
+ * Parameter cmdline is optional command string.
  */
-void
-readcmdline(firstc, cmdline)
-int	firstc;		/* either ':', '/', or '?' */
-char	*cmdline;	/* optional command string */
+void readcmdline(int firstc, char *cmdline)
 {
     int c;
     char buff[CMDSZ];
@@ -60,13 +60,13 @@ char	*cmdline;	/* optional command string */
     /*
      * Clear the range variables.
      */
-    l_pos.linep = (struct line *) NULL;
-    u_pos.linep = (struct line *) NULL;
+    l_pos.linep = (struct _line *) NULL;
+    u_pos.linep = (struct _line *) NULL;
 
     interactive = (cmdline == NULL);
 
     if (interactive)
-        gotocmd(1, 1, firstc);
+        gotocmd(1, firstc);
     p = buff;
     if ( firstc != ':' )
         *p++ = firstc;
@@ -87,7 +87,7 @@ char	*cmdline;	/* optional command string */
                     /* this is gross, but it relies
                      * only on 'gotocmd'
                      */
-                    gotocmd(1, 0, firstc == ':' ? ':' : 0);
+                    gotocmd(1, firstc == ':' ? ':' : 0);
                     for ( q = buff; q < p; q++ )
                         outchar(*q);
                 }
@@ -101,7 +101,7 @@ char	*cmdline;	/* optional command string */
             if ( c == '@' )
             {
                 p = buff;
-                gotocmd(1, 1, firstc);
+                gotocmd(1, (char) firstc);
                 continue;
             }
             outchar(c);
@@ -128,7 +128,7 @@ char	*cmdline;	/* optional command string */
         if ( *cmd == c )
         {
             /* the command was '//' or '??' */
-            repsearch();
+            repsearch(0);
             return;
         }
         /* If there is a matching '/' or '?' at the end, toss it */
@@ -305,7 +305,7 @@ char	*cmdline;	/* optional command string */
     }
     if ( strcmp(cmd, "$=") == 0 )
     {
-        char messbuff[8];
+        char messbuff[12];
         sprintf(messbuff, "%d", cntllines(Filemem, Fileend) - 1);
         msg(messbuff);
         return;
@@ -372,9 +372,7 @@ char	*cmdline;	/* optional command string */
  * the range spec. If an initial address is found, but no second, the
  * upper bound is equal to the lower.
  */
-static void
-get_range(cp)
-char	**cp;
+static void get_range(char **cp)
 {
     LPTR	*l;
     char	*p;
@@ -406,9 +404,7 @@ char	**cp;
     u_pos = *l;
 }
 
-static LPTR *
-get_line(cp)
-char	**cp;
+static LPTR *get_line(char **cp)
 {
     static	LPTR	pos;
     LPTR	*lp;
@@ -481,8 +477,7 @@ char	**cp;
     return &pos;
 }
 
-static void
-badcmd()
+static void badcmd(void)
 {
     if (interactive)
         emsg("Unrecognized command");
@@ -493,12 +488,9 @@ badcmd()
 /*
  * dotag(tag, force) - goto tag
  */
-void
-dotag(tag, force)
-char	*tag;
-bool_t	force;
+void dotag(char *tag, bool_t force)
 {
-    FILE	*tp, *fopen();
+    FILE	*tp;
     char	lbuf[LSIZE];
     char	*fname, *str;
 
@@ -539,10 +531,7 @@ bool_t	force;
     fclose(tp);
 }
 
-static	bool_t
-doecmd(arg, force)
-char	*arg;
-bool_t	force;
+static	bool_t doecmd(char *arg, bool_t force)
 {
     int	line = 1;		/* line # to go to in new file */
 
@@ -607,17 +596,16 @@ bool_t	force;
     return TRUE;
 }
 
-static void
-doshell()
+static void doshell(void)
 {
-    char	*sh, *getenv();
+    char	*sh;
 
     if ((sh = getenv("SHELL")) == NULL)
     {
         emsg("Shell variable not set");
         return;
     }
-    gotocmd(TRUE, FALSE, 0);
+    gotocmd(TRUE, 0);
 
     if (system(sh) < 0)
     {
@@ -628,13 +616,8 @@ doshell()
     wait_return();
 }
 
-void
-gotocmd(clr, fresh, firstc)
-bool_t  clr, fresh;
-char	firstc;
+void gotocmd(bool_t clr, char firstc)
 {
-    int n;
-
     windgoto(Rows - 1, 0);
     if ( clr )
         outstr(T_EL);		/* clear the bottom line */
@@ -645,22 +628,28 @@ char	firstc;
 /*
  * msg(s) - displays the string 's' on the status line
  */
-void
-msg(s)
-char *s;
+void msg(char *s)
 {
-    gotocmd(TRUE, TRUE, 0);
+    gotocmd(TRUE, 0);
     outstr(s);
 }
 
-void
-smsg(s, a1, a2, a3, a4, a5, a6, a7, a8, a9)
-char	*s;
-int	a1, a2, a3, a4, a5, a6, a7, a8, a9;
+void smsgOLD(char *s, int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9)
 {
     char	sbuf[80];
 
     sprintf(sbuf, s, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+    msg(sbuf);
+}
+
+void smsg(char *s, ...)
+{
+    char sbuf[80];
+    va_list argp;
+
+    va_start(argp, s);
+    vsprintf(sbuf, s, argp);
+    va_end(argp);
     msg(sbuf);
 }
 
@@ -669,17 +658,14 @@ int	a1, a2, a3, a4, a5, a6, a7, a8, a9;
  *
  * Rings the bell, if appropriate, and calls message() to do the real work
  */
-void
-emsg(s)
-char	*s;
+void emsg(char *s)
 {
     if (P(P_EB))
         beep();
     msg(s);
 }
 
-void
-wait_return()
+void wait_return(void)
 {
     char	c;
 

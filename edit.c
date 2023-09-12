@@ -8,6 +8,13 @@
  */
 
 #include "stevie.h"
+#include <ctype.h>
+#ifdef __PUREC__
+#include <ext.h>
+#else
+#include <unistd.h>
+#endif
+
 void insertchar(int c);
 
 /*
@@ -18,8 +25,7 @@ void insertchar(int c);
  */
 bool_t	did_ai = FALSE;
 
-void
-edit()
+void edit(void)
 {
 	int c;
 	char *p, *q;
@@ -148,49 +154,41 @@ edit()
  */
 #define	ISSPECIAL(c)	((c) == NL || (c) == CR || (c) == ESC)
 
-void
-insertchar(c)
-int c;
+void insertchar(int c)
 {
-	char *p;
+    char *p;
 
-if ( ! anyinput() )
-{
-    inschar(c);
-    *Insptr++ = c;
-    Ninsert++;
-    /*
-     * The following kludge avoids overflowing the statically
-     * allocated insert buffer. Just dump the user back into
-     * command mode, and print a message.
-     */
-    if (Insptr + 10 >= &Insbuff[1024])
-    {
-        stuffin(mkstr(ESC));
-        emsg("No buffer space - returning to command mode");
-        sleep(2);
-    }
-}
-else
-{
-    /* If there's any pending input, grab it all at once. */
-    p = Insptr;
-    *Insptr++ = c;
-    Ninsert++;
-    for (c = vpeekc(); !ISSPECIAL(c) ; c = vpeekc())
-    {
-        c = vgetc();
-        *Insptr++ = c;
+    if (!anyinput()) {
+        inschar(c);
+        *Insptr++ = (char) c;
         Ninsert++;
+        /*
+         * The following kludge avoids overflowing the statically
+         * allocated insert buffer. Just dump the user back into
+         * command mode, and print a message.
+         */
+        if (Insptr + 10 >= &Insbuff[1024]) {
+            stuffin(mkstr(ESC));
+            emsg("No buffer space - returning to command mode");
+            sleep(2);
+        }
+    } else {
+        /* If there's any pending input, grab it all at once. */
+        p = Insptr;
+        *Insptr++ = (char) c;
+        Ninsert++;
+        for (c = vpeekc(); !ISSPECIAL(c); c = vpeekc()) {
+            c = vgetc();
+            *Insptr++ = (char) c;
+            Ninsert++;
+        }
+        *Insptr = '\0';
+        insstr(p);
     }
-    *Insptr = '\0';
-    insstr(p);
-}
-updateline();
+    updateline();
 }
 
-void
-getout()
+void getout(void)
 {
     windgoto(Rows - 1, 0);
     putchar('\r');
@@ -198,9 +196,7 @@ getout()
     windexit(0);
 }
 
-void
-scrolldown(nlines)
-int nlines;
+void scrolldown(int nlines)
 {
     register LPTR	*p;
     register int	done = 0;	/* total # of physical lines done */
@@ -218,9 +214,7 @@ int nlines;
     s_ins(0, done);
 }
 
-void
-scrollup(nlines)
-int nlines;
+void scrollup(int nlines)
 {
     register LPTR	*p;
     register int	done = 0;	/* total # of physical lines done */
@@ -251,8 +245,7 @@ int nlines;
  * sucessful, FALSE when we hit a boundary (of a line, or the file).
  */
 
-bool_t
-oneright()
+bool_t oneright(void)
 {
     set_want_col = TRUE;
 
@@ -268,10 +261,10 @@ oneright()
     case -1:
         return FALSE;
     }
+    return FALSE;
 }
 
-bool_t
-oneleft()
+bool_t oneleft(void)
 {
     set_want_col = TRUE;
 
@@ -287,11 +280,10 @@ oneleft()
     case -1:
         return FALSE;
     }
+    return FALSE;
 }
 
-void
-beginline(flag)
-bool_t	flag;
+void beginline(bool_t flag)
 {
     while ( oneleft() )
         ;
@@ -303,8 +295,7 @@ bool_t	flag;
     set_want_col = TRUE;
 }
 
-bool_t
-oneup(n)
+bool_t oneup(int n)
 {
     LPTR p, *np;
     int k;
@@ -332,8 +323,7 @@ oneup(n)
     return TRUE;
 }
 
-bool_t
-onedown(n)
+bool_t onedown(int n)
 {
     LPTR p, *np;
     int k;

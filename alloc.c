@@ -14,9 +14,7 @@
  * deallocation of data structures.
  */
 
-char *
-alloc(size)
-unsigned size;
+char *alloc(unsigned size)
 {
 	char *p;		/* pointer to new storage space */
 
@@ -27,15 +25,12 @@ unsigned size;
 	return(p);
 }
 
-char *
-strsave(string)
-char *string;
+char *strsave(char *string)
 {
 	return(strcpy(alloc((unsigned)(strlen(string)+1)),string));
 }
 
-void
-screenalloc()
+void screenalloc(void)
 {
 	/*
 	 * If we're changing the size of the screen, free the old arrays
@@ -45,29 +40,27 @@ screenalloc()
 	if (Nextscreen != NULL)
 		free(Nextscreen);
 
-	Realscreen = malloc((unsigned)(Rows*Columns))+4; //+4 = Protection against naughty stuff
-Nextscreen = malloc((unsigned)(Rows*Columns)) + 4; //     we do in filetonext()
+	Realscreen = (char *) malloc((unsigned)(Rows*Columns) + 4); /* +4 = Protection against naughty stuff */
+    Nextscreen = (char *) malloc((unsigned)(Rows*Columns) + 4); /*     we do in filetonext() */
 }
 
 /*
  * Allocate and initialize a new line structure with room for
  * 'nchars' characters.
  */
-LINE *
-newline(nchars)
-int	nchars;
+LINEX *newline(int nchars)
 {
-    register LINE	*l;
+    register LINEX	*l;
 
-    if ((l = (LINE *) alloc(sizeof(LINE))) == NULL)
-        return (LINE *) NULL;
+    if ((l = (LINEX *) alloc(sizeof(LINEX))) == NULL)
+        return (LINEX *) NULL;
 
     l->s = alloc(nchars);		/* the line is empty */
     l->s[0] = NUL;
     l->size = nchars;
 
-    l->prev = (LINE *) NULL;	/* should be initialized by caller */
-    l->next = (LINE *) NULL;
+    l->prev = (LINEX *) NULL;	/* should be initialized by caller */
+    l->next = (LINEX *) NULL;
 
     return l;
 }
@@ -75,8 +68,7 @@ int	nchars;
 /*
  * filealloc() - construct an initial empty file buffer
  */
-void
-filealloc()
+void filealloc(void)
 {
     if ((Filemem->linep = newline(1)) == NULL)
     {
@@ -108,10 +100,9 @@ filealloc()
  *
  * Free all lines in the current buffer.
  */
-void
-freeall()
+void freeall(void)
 {
-    LINE	*lp, *xlp;
+    LINEX	*lp, *xlp;
 
     for (lp = Filemem->linep; lp != NULL ; lp = xlp)
     {
@@ -129,8 +120,7 @@ freeall()
 /*
  * buf1line() - return TRUE if there is only one line
  */
-bool_t
-buf1line()
+bool_t buf1line(void)
 {
     return (Filemem->linep->next == Fileend->linep);
 }
@@ -138,8 +128,7 @@ buf1line()
 /*
  * bufempty() - return TRUE if the buffer is empty
  */
-bool_t
-bufempty()
+bool_t bufempty(void)
 {
     return (buf1line() && Filemem->linep->s[0] == NUL);
 }
@@ -147,8 +136,7 @@ bufempty()
 /*
  * lineempty() - return TRUE if the current line is empty
  */
-bool_t
-lineempty()
+bool_t lineempty(void)
 {
     return (Curschar->linep->s[0] == NUL);
 }
@@ -159,9 +147,7 @@ lineempty()
  * This routine will probably never be called with a position resting
  * on the NUL byte, but handle it correctly in case it happens.
  */
-bool_t
-endofline(p)
-register LPTR	*p;
+bool_t endofline(LPTR *p)
 {
     return (p->linep->s[p->index] == NUL || p->linep->s[p->index + 1] == NUL);
 }
@@ -172,14 +158,12 @@ register LPTR	*p;
  * If not, it attempts to allocate the space and adjust the data structures
  * accordingly. If everything fails it returns FALSE.
  */
-bool_t
-canincrease(n)
-register int	n;
+bool_t canincrease(int n)
 {
     register int	nsize;
     register char	*s;		/* pointer to new space */
 
-    nsize = strlen(Curschar->linep->s) + 1 + n;	/* size required */
+    nsize = (int) strlen(Curschar->linep->s) + 1 + n;	/* size required */
 
     if (nsize <= Curschar->linep->size)
         return TRUE;

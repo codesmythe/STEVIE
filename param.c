@@ -39,122 +39,115 @@ struct	param	params[] = {
 
 };
 
-static	void	showparms();
+static	void showparms(bool_t all);
 
-void
-doset(arg, inter)
-char	*arg;		/* parameter string */
-bool_t	inter;		/* TRUE if called interactively */
+void doset(char *arg /* parameter string */, bool_t inter /* TRUE if called interactively */)
 {
-	int	i;
-	char	*s;
-	bool_t	did_lines = FALSE;
+    int i;
+    char *s;
+    bool_t did_lines = FALSE;
 
-	bool_t	state = TRUE;		/* new state of boolean parms. */
+    bool_t state = TRUE;        /* new state of boolean parms. */
 
-	if (arg == NULL) {
-		showparms(FALSE);
-		return;
-	}
-	if (strncmp(arg, "all", 3) == 0) {
-		showparms(TRUE);
-		return;
-	}
-	if (strncmp(arg, "no", 2) == 0) {
-		state = FALSE;
-		arg += 2;
-	}
+    if (arg == NULL) {
+        showparms(FALSE);
+        return;
+    }
+    if (strncmp(arg, "all", 3) == 0) {
+        showparms(TRUE);
+        return;
+    }
+    if (strncmp(arg, "no", 2) == 0) {
+        state = FALSE;
+        arg += 2;
+    }
 
-	for (i=0; params[i].fullname[0] != NUL ;i++) {
-		s = params[i].fullname;
-		if (strncmp(arg, s, strlen(s)) == 0)	/* matched full name */
-			break;
-		s = params[i].shortname;
-		if (strncmp(arg, s, strlen(s)) == 0)	/* matched short name */
-			break;
-	}
+    for (i = 0; params[i].fullname[0] != NUL; i++) {
+        s = params[i].fullname;
+        if (strncmp(arg, s, strlen(s)) == 0)    /* matched full name */
+            break;
+        s = params[i].shortname;
+        if (strncmp(arg, s, strlen(s)) == 0)    /* matched short name */
+            break;
+    }
 
-	if (params[i].fullname[0] != NUL) {	/* found a match */
-		if (params[i].flags & P_NUM) {
-			did_lines = (i == P_LI);
-			if (inter && (arg[strlen(s)] != '=' || state == FALSE))
-				emsg("Invalid set of numeric parameter");
-			else {
-				params[i].value = atoi(arg+strlen(s)+1);
-				params[i].flags |= P_CHANGED;
-			}
-		} else /* boolean */ {
-			if (inter && (arg[strlen(s)] == '='))
-				emsg("Invalid set of boolean parameter");
-			else {
-				params[i].value = state;
-				params[i].flags |= P_CHANGED;
-			}
-		}
-	} else {
-		if (inter)
-			emsg("Unrecognized 'set' option");
-	}
+    if (params[i].fullname[0] != NUL) {    /* found a match */
+        if (params[i].flags & P_NUM) {
+            did_lines = (i == P_LI);
+            if (inter && (arg[strlen(s)] != '=' || state == FALSE))
+                emsg("Invalid set of numeric parameter");
+            else {
+                params[i].value = atoi(arg + strlen(s) + 1);
+                params[i].flags |= P_CHANGED;
+            }
+        } else /* boolean */ {
+            if (inter && (arg[strlen(s)] == '='))
+                emsg("Invalid set of boolean parameter");
+            else {
+                params[i].value = state;
+                params[i].flags |= P_CHANGED;
+            }
+        }
+    } else {
+        if (inter)
+            emsg("Unrecognized 'set' option");
+    }
 
-	/*
-	 * Check the bounds for numeric parameters here
-	 */
-	if (P(P_TS) <= 0 || P(P_TS) > 32) {
-		if (inter)
-			emsg("Invalid tab size specified");
-		P(P_TS) = 8;
-		return;
-	}
+    /*
+     * Check the bounds for numeric parameters here
+     */
+    if (P(P_TS) <= 0 || P(P_TS) > 32) {
+        if (inter)
+            emsg("Invalid tab size specified");
+        P(P_TS) = 8;
+        return;
+    }
     updatetabstoptable();
 
 /*
  * Update the screen in case we changed something like "tabstop"
  * or "list" that will change its appearance.
  */
-if (inter)
-    updatescreen();
-
-if (did_lines)
-{
-    Rows = P(P_LI);
-    screenalloc();		/* allocate new screen buffers */
-    screenclear();
-    updatescreen();
-}
-if (P(P_SS) <= 0 || P(P_SS) > Rows)
-{
     if (inter)
-        emsg("Invalid scroll size specified");
-    P(P_SS) = 12;
-    return;
-}
+        updatescreen();
+
+    if (did_lines) {
+        Rows = P(P_LI);
+        screenalloc();        /* allocate new screen buffers */
+        screenclear();
+        updatescreen();
+    }
+    if (P(P_SS) <= 0 || P(P_SS) > Rows) {
+        if (inter)
+            emsg("Invalid scroll size specified");
+        P(P_SS) = 12;
+        return;
+    }
 
 /*
  * Check for another argument, and call doset() recursively, if
  * found. If any argument results in an error, no further
  * parameters are processed.
  */
-while (*arg != ' ' && *arg != '\t')  	/* skip to next white space */
-{
-    if (*arg == NUL)
-        return;			/* end of parameter list */
-    arg++;
-}
-while (*arg == ' ' || *arg == '\t')	/* skip to next non-white */
-    arg++;
+    while (*arg != ' ' && *arg != '\t')    /* skip to next white space */
+    {
+        if (*arg == NUL)
+            return;            /* end of parameter list */
+        arg++;
+    }
+    while (*arg == ' ' || *arg == '\t')    /* skip to next non-white */
+        arg++;
 
-if (*arg)
-    doset(arg);	/* recurse on next parameter, if present */
+    if (*arg)
+        doset(arg, inter);    /* recurse on next parameter, if present */
 }
 
-static	void
-showparms(all)
-bool_t	all;	/* show ALL parameters */
+static	void showparms(bool_t all) /* show ALL parameters */
 {
     struct	param	*p;
     char	buf[64];
 
-    gotocmd(TRUE, TRUE, 0);
+    gotocmd(TRUE, 0);
     outstr("Parameters:\r\n");
 
     for (p = &params[0]; p->fullname[0] != NUL ; p++)

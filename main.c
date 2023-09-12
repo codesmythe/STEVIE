@@ -8,6 +8,8 @@
  */
 
 
+#include <ctype.h>
+#include <stdarg.h>
 #include "stevie.h"
 
 int Rows;		/* Number of Rows and Columns */
@@ -80,11 +82,7 @@ char **files;		/* list of input files */
 int  numfiles;		/* number of input files */
 int  curfile;		/* number of the current file */
 
-void stuffin(char *s);
-void stuffnum(int n);
-
-static void
-usage()
+static void usage(void)
 {
     fprintf(stderr, "usage: stevie [file ...]\n");
     fprintf(stderr, "       stevie -t tag\n");
@@ -93,11 +91,9 @@ usage()
     exit(1);
 }
 
-main(argc, argv)
-int	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
-    char	*initstr, *getenv();	/* init string from the environment */
+    char	*initstr;	/* init string from the environment */
     char	*tag = NULL;		/* tag from command line */
     char	*pat = NULL;		/* pattern from command line */
     int	line = -1;		/* line number from command line */
@@ -205,7 +201,7 @@ char	*argv[];
     }
 
     screenalloc();
-    updatetabstoptable();   //Initial tabstop table
+    updatetabstoptable();   /* Initial tabstop table */
     filealloc();		/* Initialize Filemem & Fileend */
 
     screenclear();
@@ -258,15 +254,14 @@ char	*argv[];
     edit();
 
     windexit(0);
+    return 0;
 }
 
 #define	RBSIZE	1280		/* should be a little bigger than YBSIZE */
 static char getcbuff[RBSIZE];
 static char *getcnext = NULL;
 
-void
-stuffin(s)
-char *s;
+void stuffin(char *s)
 {
     if ( getcnext == NULL )
     {
@@ -277,9 +272,7 @@ char *s;
         strcat(getcbuff, s);
 }
 
-void
-stuffnum(n)
-int	n;
+void stuffnum(int n)
 {
     char	buf[32];
 
@@ -287,10 +280,7 @@ int	n;
     stuffin(buf);
 }
 
-void
-addtobuff(s, c1, c2, c3, c4, c5, c6)
-char *s;
-char c1, c2, c3, c4, c5, c6;
+void addtobuffOLD(char *s, char c1, char c2, char c3, char c4, char c5, char c6)
 {
     char *p = s;
     if ( (*p++ = c1) == NUL )
@@ -307,8 +297,19 @@ char c1, c2, c3, c4, c5, c6;
         return;
 }
 
-int
-vgetc()
+void addtobuff(char *s, ...)
+{
+    char *p = s;
+
+    va_list argp;
+    va_start(argp, s);
+
+    while ( (*p++ = (char) va_arg(argp, int)) != NUL)
+        ;
+    va_end(argp);
+}
+
+int vgetc(void)
 {
     if ( getcnext != NULL )
     {
@@ -323,8 +324,7 @@ vgetc()
     return(inchar());
 }
 
-int
-vpeekc()
+int vpeekc(void)
 {
     if ( getcnext != NULL )
         return(*getcnext);
@@ -337,9 +337,7 @@ vpeekc()
  * Return non-zero if input is pending.
  */
 
-bool_t
-anyinput()
+bool_t anyinput(void)
 {
     return (getcnext != NULL);
 }
-

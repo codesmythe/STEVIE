@@ -13,11 +13,18 @@
  */
 
 #include "stevie.h"
+#include <ctype.h>
 
-static	void	doshift(), dodelete(), doput(), dochange();
-static	void	tabinout(), startinsert();
-static	bool_t	dojoin(), doyank();
-void resetundo();
+static void dochange(char c1, char c2, int num);
+static void dodelete(char c1, char c2, int num);
+static bool_t dojoin(void);
+static void doput(int dir);
+static void doshift(int op, char c1, char c2, int num);
+static bool_t doyank(void);
+static void tabinout(int inout, int num);
+void resetundo(void);
+
+static void startinsert(char *initstr, int startln);
 char *mkstr(char c);
 
 /*
@@ -95,9 +102,7 @@ static	int	opnum = 0;
  * Execute a command in normal mode.
  */
 
-void
-normal(c)
-int c;
+void normal(int c)
 {
 	char *p, *q;
 	int n;
@@ -948,11 +953,7 @@ int c;
 /*
  * doshift - handle a shift operation
  */
-static void
-doshift(op, c1, c2, num)
-int	op;
-char	c1, c2;
-int	num;
+static void doshift(int op, char c1, char c2, int num)
 {
 	LPTR	top, bot;
 	int	nlines;
@@ -996,10 +997,7 @@ int	num;
 /*
  * dodelete - handle a delete operation
  */
-static void
-dodelete(c1, c2, num)
-char	c1, c2;
-int	num;
+static void dodelete(char c1, char c2, int num)
 {
 	LPTR	top, bot;
 	int	nlines;
@@ -1078,10 +1076,7 @@ int	num;
 /*
  * dochange - handle a change operation
  */
-static void
-dochange(c1, c2, num)
-char	c1, c2;
-int	num;
+static void dochange(char c1, char c2, int num)
 {
 	char	sbuf[16];
 	bool_t	doappend;	/* true if we should do append, not insert */
@@ -1103,7 +1098,7 @@ int	num;
 	if (doappend && !lineempty())
 		inc(Curschar);
 
-	startinsert(sbuf);
+	startinsert(sbuf, FALSE);
 }
 
 #define	YBSIZE	1024
@@ -1111,8 +1106,7 @@ int	num;
 static	char	ybuf[YBSIZE];
 static	int	ybtype = MBAD;
 
-static bool_t
-doyank()
+static bool_t doyank(void)
 {
 	LPTR	top, bot;
 	char	*yptr = ybuf;
@@ -1171,9 +1165,7 @@ doyank()
 	return TRUE;
 }
 
-static void
-doput(dir)
-int	dir;
+static void doput(int dir)
 {
 	if (ybtype == MBAD) {
 		beep();
@@ -1195,42 +1187,36 @@ int	dir;
  * If inout==0, add a tab to the begining of the next num lines.
  * If inout==1, delete a tab from the beginning of the next num lines.
  */
-static void
-tabinout(inout, num)
-int	inout;
-int	num;
+static void tabinout(int inout, int num)
 {
-	int	ntodo = num;
-	LPTR	*p;
+    int ntodo = num;
+    LPTR *p;
 
-	/* construct undo stuff */
-	resetundo();
-	*Uncurschar = *Curschar;
-	sprintf(Undobuff, "%d%s", num, (inout == 0) ? "<<" : ">>");
+    /* construct undo stuff */
+    resetundo();
+    *Uncurschar = *Curschar;
+    sprintf(Undobuff, "%d%s", num, (inout == 0) ? "<<" : ">>");
 
-	beginline(FALSE);
-	while ( ntodo-- > 0 ) {
-		beginline(FALSE);
-		if ( inout == 0 )
-			inschar(TAB);
-		else {
-			if ( gchar(Curschar) == TAB )
-				delchar(TRUE);
-		}
-		if ( ntodo > 0 ) {
-			if ( (p=nextline(Curschar)) != NULL )
-				*Curschar = *p;
-			else
-				break;
-		}
-	}
-	can_undo = TRUE;
+    beginline(FALSE);
+    while (ntodo-- > 0) {
+        beginline(FALSE);
+        if (inout == 0)
+            inschar(TAB);
+        else {
+            if (gchar(Curschar) == TAB)
+                delchar(TRUE);
+        }
+        if (ntodo > 0) {
+            if ((p = nextline(Curschar)) != NULL)
+                *Curschar = *p;
+            else
+                break;
+        }
+    }
+    can_undo = TRUE;
 }
 
-static void
-startinsert(initstr, startln)
-char *initstr;
-int	startln;	/* if set, insert point really at start of line */
+static void startinsert(char *initstr, int startln /* if set, insert point really at start of line */)
 {
 	char *p, c;
 
@@ -1246,65 +1232,61 @@ int	startln;	/* if set, insert point really at start of line */
 		msg("Insert Mode");
 }
 
-void
-resetundo()
+void resetundo(void)
 {
 	Undelchars = 0;
 	*Undobuff = '\0';
 	Uncurschar->linep = NULL;
 }
 
-static bool_t
-dojoin()
+static bool_t dojoin(void)
 {
-	int	scol;		/* save cursor column */
-	int	size;		/* size of the joined line */
+    int scol;        /* save cursor column */
+    int size;        /* size of the joined line */
 
-	if (nextline(Curschar) == NULL)		/* on last line */
-		return FALSE;
+    if (nextline(Curschar) == NULL)        /* on last line */
+        return FALSE;
 
-	if (!canincrease(size = strlen(Curschar->linep->next->s)))
-		return FALSE;
+    if (!canincrease(size = strlen(Curschar->linep->next->s)))
+        return FALSE;
 
-	while (oneright())			/* to end of line */
-		;
+    while (oneright())            /* to end of line */
+        ;
 
-	strcat(Curschar->linep->s, Curschar->linep->next->s);
+    strcat(Curschar->linep->s, Curschar->linep->next->s);
 
-	/*
-	 * Delete the following line. To do this we move the cursor
-	 * there briefly, and then move it back. Don't back up if the
-	 * delete made us the last line.
-	 */
-	Curschar->linep = Curschar->linep->next;
-	scol = Curschar->index;
+    /*
+     * Delete the following line. To do this we move the cursor
+     * there briefly, and then move it back. Don't back up if the
+     * delete made us the last line.
+     */
+    Curschar->linep = Curschar->linep->next;
+    scol = Curschar->index;
 
-	if (nextline(Curschar) != NULL) {
-		delline(1);
-		Curschar->linep = Curschar->linep->prev;
-	} else
-		delline(1);
+    if (nextline(Curschar) != NULL) {
+        delline(1);
+        Curschar->linep = Curschar->linep->prev;
+    } else
+        delline(1);
 
-	Curschar->index = scol;
+    Curschar->index = scol;
 
-	oneright();		/* go to first char. of joined line */
+    oneright();        /* go to first char. of joined line */
 
-	if (size != 0) {
-		/*
-		 * Delete leading white space on the joined line
-		 * and insert a single space.
-		 */
-while (gchar(Curschar) == ' ' || gchar(Curschar) == TAB)
-    delchar(TRUE);
-inschar(' ');
+    if (size != 0) {
+        /*
+         * Delete leading white space on the joined line
+         * and insert a single space.
+         */
+        while (gchar(Curschar) == ' ' || gchar(Curschar) == TAB)
+            delchar(TRUE);
+        inschar(' ');
+    }
+
+    return TRUE;
 }
 
-return TRUE;
-}
-
-char *
-mkstr(c)
-char	c;
+char *mkstr(char c)
 {
     static	char	s[2];
 

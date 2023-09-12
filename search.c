@@ -8,6 +8,7 @@
  */
 
 #include "stevie.h"
+#include <ctype.h>
 
 #include "regexp.h"	/* Henry Spencer's regular expression routines */
 
@@ -30,12 +31,12 @@
 
 bool_t	begword;	/* does the search include a 'begin word' match */
 
+static int cls(char c);
+
 /*
  * mapstring(s) - map special backslash sequences
  */
-static char *
-mapstring(s)
-register char	*s;
+static char *mapstring(char *s)
 {
 	static	char	ns[80];
 	char	*p;
@@ -76,14 +77,11 @@ register char	*s;
 
 static char *laststr = NULL;
 static int lastsdir;
-//static LPTR *bcksearch(), *fwdsearch();
+/* static LPTR *bcksearch(), *fwdsearch(); */
 static LPTR *bcksearch(char *str);
 static LPTR *fwdsearch(char *str);
 
-static LPTR *
-ssearch(dir,str)
-int	dir;	/* FORWARD or BACKWARD */
-char	*str;
+/*static*/ LPTR *ssearch(int dir /* FORWARD or BACKWARD */, char *str)
 {
 	LPTR	*pos;
 
@@ -107,32 +105,25 @@ char	*str;
 	return pos;
 }
 
-void
-dosearch(dir,str)
-int dir;
-char *str;
+void dosearch(int dir, char *str)
 {
 	LPTR *p;
 
 	if ((p = ssearch(dir,str)) == NULL)
 		msg("Pattern not found");
 	else {
-		LPTR savep;
-
 		cursupdate();
 		/* if we're backing up, we make sure the line we're on */
 		/* is on the screen. */
 		setpcmark();
-		*Curschar = savep = *p;
+		*Curschar = *p;
 		cursupdate();
 	}
 }
 
 #define	OTHERDIR(x)	(((x) == FORWARD) ? BACKWARD : FORWARD)
 
-void
-repsearch(flag)
-int	flag;
+void repsearch(int flag)
 {
 	int	dir = lastsdir;
 
@@ -154,9 +145,7 @@ char	*s;
 	emsg(s);
 }*/
 
-static LPTR *
-fwdsearch(str)
-register char *str;
+static LPTR *fwdsearch(char *str)
 {
 	static LPTR infile;
 	register LPTR *p;
@@ -220,9 +209,7 @@ register char *str;
 	return(NULL);
 }
 
-static LPTR *
-bcksearch(str)
-char *str;
+static LPTR *bcksearch(char *str)
 {
 	static LPTR infile;
 	register LPTR *p;
@@ -350,11 +337,7 @@ static int  lastctype;		/* last type of search ("find" or "to") */
  * Search for character 'c', in direction 'dir'. If type is 0, move to
  * the position of the character, otherwise move to just before the char.
  */
-bool_t
-searchc(c, dir, type)
-char	c;
-int	dir;
-int	type;
+bool_t searchc(char c, int dir, int type)
 {
 	LPTR	save;
 
@@ -381,9 +364,7 @@ int	type;
 	return FALSE;
 }
 
-bool_t
-crepsearch(flag)
-int	flag;
+bool_t crepsearch(int flag)
 {
 	int	dir = lastcdir;
 	int	rval;
@@ -405,12 +386,11 @@ int	flag;
 /*
  * showmatch - move the cursor to the matching paren or brace
  */
-LPTR *
-showmatch()
+LPTR *showmatch(void)
 {
 	static	LPTR	pos;
-	int	(*move)(), inc(), dec();
-	char	initc = gchar(Curschar);	/* initial char */
+	int	(*move)(LPTR *);
+	char	initc = (char) gchar(Curschar);	/* initial char */
 	char	findc;				/* terminating char */
 	char	c;
 	int	count = 0;
@@ -448,7 +428,7 @@ showmatch()
 	}
 
 	while ((*move)(&pos) != -1) {		/* until end of file */
-		c = gchar(&pos);
+		c = (char) gchar(&pos);
 		if (c == initc)
 			count++;
 		else if (c == findc) {
@@ -465,9 +445,7 @@ showmatch()
  *
  * Return TRUE if a function was found.
  */
-bool_t
-findfunc(dir)
-int	dir;
+bool_t findfunc(int dir)
 {
 	LPTR	*curr;
 
@@ -515,9 +493,7 @@ static	int	stype;		/* type of the word motion being performed */
  * class 2 are reported as class 1 since only white space boundaries are
  * of interest.
  */
-static	int
-cls(c)
-char	c;
+static int cls(char c)
 {
 	if (C0(c))
 		return 0;
@@ -537,13 +513,10 @@ char	c;
  *
  * Returns the resulting position, or NULL if EOF was reached.
  */
-LPTR *
-fwd_word(p, type)
-LPTR	*p;
-int	type;
+LPTR *fwd_word(LPTR *p, int type)
 {
 	static	LPTR	pos;
-	int	sclass = cls(gchar(p));		/* starting class */
+	int	sclass = cls((char) gchar(p));		/* starting class */
 
 	pos = *p;
 
@@ -556,20 +529,20 @@ int	type;
 		return NULL;
 
 	if (sclass != 0) {
-		while (cls(gchar(&pos)) == sclass) {
+		while (cls((char) gchar(&pos)) == sclass) {
 			if (inc(&pos) == -1)
 				return NULL;
 		}
 		/*
 		 * If we went from 1 -> 2 or 2 -> 1, return here.
 		 */
-		if (cls(gchar(&pos)) != 0)
+		if (cls((char) gchar(&pos)) != 0)
 			return &pos;
 	}
 
 	/* We're in white space; go to next non-white */
 
-	while (cls(gchar(&pos)) == 0) {
+	while (cls((char) gchar(&pos)) == 0) {
 		/*
 		 * We'll stop if we land on a blank line
 		 */
@@ -588,13 +561,10 @@ int	type;
  *
  * Returns the resulting position, or NULL if EOF was reached.
  */
-LPTR *
-bck_word(p, type)
-LPTR	*p;
-int	type;
+LPTR *bck_word(LPTR *p, int type)
 {
 	static	LPTR	pos;
-int	sclass = cls(gchar(p));		/* starting class */
+int	sclass = cls((char) gchar(p));		/* starting class */
 
 pos = *p;
 
@@ -607,12 +577,12 @@ if (dec(&pos) == -1)
  * If we're in the middle of a word, we just have to
  * back up to the start of it.
  */
-if (cls(gchar(&pos)) == sclass && sclass != 0)
+if (cls((char) gchar(&pos)) == sclass && sclass != 0)
 {
     /*
      * Move backward to start of the current word
      */
-    while (cls(gchar(&pos)) == sclass)
+    while (cls((char) gchar(&pos)) == sclass)
     {
         if (dec(&pos) == -1)
             return NULL;
@@ -626,7 +596,7 @@ if (cls(gchar(&pos)) == sclass && sclass != 0)
  * of the prior word.
  */
 
-while (cls(gchar(&pos)) == 0)  		/* skip any white space */
+while (cls((char) gchar(&pos)) == 0)  		/* skip any white space */
 {
     /*
      * We'll stop if we land on a blank line
@@ -638,12 +608,12 @@ while (cls(gchar(&pos)) == 0)  		/* skip any white space */
         return NULL;
 }
 
-sclass = cls(gchar(&pos));
+sclass = cls((char) gchar(&pos));
 
 /*
  * Move backward to start of this word.
  */
-while (cls(gchar(&pos)) == sclass)
+while (cls((char) gchar(&pos)) == sclass)
 {
     if (dec(&pos) == -1)
         return NULL;
@@ -665,13 +635,10 @@ return &pos;
  *
  * Returns the resulting position, or NULL if EOF was reached.
  */
-LPTR *
-end_word(p, type)
-LPTR	*p;
-int	type;
+LPTR *end_word(LPTR *p, int type)
 {
     static	LPTR	pos;
-    int	sclass = cls(gchar(p));		/* starting class */
+    int	sclass = cls((char) gchar(p));		/* starting class */
 
     pos = *p;
 
@@ -684,12 +651,12 @@ int	type;
      * If we're in the middle of a word, we just have to
      * move to the end of it.
      */
-    if (cls(gchar(&pos)) == sclass && sclass != 0)
+    if (cls((char) gchar(&pos)) == sclass && sclass != 0)
     {
         /*
          * Move forward to end of the current word
          */
-        while (cls(gchar(&pos)) == sclass)
+        while (cls((char) gchar(&pos)) == sclass)
         {
             if (inc(&pos) == -1)
                 return NULL;
@@ -703,18 +670,18 @@ int	type;
      * of the next word.
      */
 
-    while (cls(gchar(&pos)) == 0)  		/* skip any white space */
+    while (cls((char) gchar(&pos)) == 0)  		/* skip any white space */
     {
         if (inc(&pos) == -1)
             return NULL;
     }
 
-    sclass = cls(gchar(&pos));
+    sclass = cls((char) gchar(&pos));
 
     /*
      * Move forward to end of this word.
      */
-    while (cls(gchar(&pos)) == sclass)
+    while (cls((char) gchar(&pos)) == sclass)
     {
         if (inc(&pos) == -1)
             return NULL;

@@ -9,15 +9,12 @@
 
 #include "stevie.h"
 
-void
-filemess(s)
-char *s;
+void filemess(char *s)
 {
 	smsg("\"%s\" %s", (Filename == NULL) ? "" : Filename, s);
 }
 
-void
-renum()
+void renum(void)
 {
 	LPTR	*p;
 	unsigned int l = 0;
@@ -28,14 +25,10 @@ renum()
 	Fileend->linep->num = 0xffff;
 }
 
-bool_t
-readfile(fname, fromp, nochangename)
-char	*fname;
-LPTR	*fromp;
-bool_t	nochangename;	/* if TRUE, don't change the Filename */
+bool_t readfile(char *fname, LPTR *fromp, bool_t nochangename /* If TRUE, don't change the Filename */)
 {
-    FILE	*f, *fopen();
-    LINE	*curr;
+    FILE	*f;
+    LINEX	*curr;
     char	buff[1024];
     char	*p;
     int	i, c;
@@ -76,7 +69,7 @@ bool_t	nochangename;	/* if TRUE, don't change the Filename */
         if (c == '\n')  	/* process the completed line */
         {
             int	len;
-            LINE	*lp;
+            LINEX	*lp;
 
             buff[i] = '\0';
             len = strlen(buff) + 1;
@@ -106,11 +99,11 @@ bool_t	nochangename;	/* if TRUE, don't change the Filename */
      */
     if (wasempty)
     {
-        LINE	*dummy = Filemem->linep;	/* dummy line ptr */
+        LINEX	*dummy = Filemem->linep;	/* dummy line ptr */
 
         free(dummy->s);				/* free string space */
         Filemem->linep = Filemem->linep->next;
-        free(dummy);				/* free LINE struct */
+        free(dummy);				/* free LINEX struct */
         Filemem->linep->prev = NULL;
 
         Curschar->linep = Filemem->linep;
@@ -135,13 +128,9 @@ bool_t	nochangename;	/* if TRUE, don't change the Filename */
  * If either 'start' or 'end' contain null line pointers, the default
  * is to use the start or end of the file respectively.
  */
-bool_t
-writeit(fname, start, end)
-char	*fname;
-LPTR	*start, *end;
+bool_t writeit(char *fname, LPTR *start, LPTR *end)
 {
-    FILE	*f, *fopen();
-    FILE	*fopenb();		/* open in binary mode, where needed */
+    FILE	*f;
     char	buff[80];
     char	backup[16], *s;
     long	nchars;

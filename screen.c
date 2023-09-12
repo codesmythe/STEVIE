@@ -15,7 +15,6 @@
  */
 
 #include "stevie.h"
-void updatescreen();
 void s_ins(int row, int nlines);
 
 /*
@@ -38,13 +37,13 @@ static	int	Cline_row;	/* starting row of the cursor line */
 * program file size, the font is only included once and at run time
 * shifted left to produce the other copy.
 */
-void preshiftfont()
+void preshiftfont(void)
 {
-UWORD *src=(UWORD *)&fontright;
-UWORD *dst=(UWORD *)&fontleft;
-WORD i;
-for (i=0;i<256*8;i++)
-*dst++=(*src++)<<8;
+    UWORD *src = (UWORD *) &fontright;
+    UWORD *dst = (UWORD *) &fontleft;
+    WORD i;
+    for (i = 0; i < 256 * 8; i++)
+        *dst++ = (*src++) << 8;
 }
 
 /*
@@ -58,13 +57,12 @@ for (i=0;i<256*8;i++)
 */
 char tabstops[120];     /* I suppose not many texts would have more than
 80 columns AND require tabstops ;) */
-void updatetabstoptable()
+void updatetabstoptable(void)
 {
-int col;
-for (col=0;col<120;col++)
-tabstops[col]=((P(P_TS)-1) - col%P(P_TS));
+    int col;
+    for (col = 0; col < 120; col++)
+        tabstops[col] = (char) ((P(P_TS) - 1) - col % P(P_TS));
 }
-
 /*
 * filetonext()
 *
@@ -76,150 +74,139 @@ tabstops[col]=((P(P_TS)-1) - col%P(P_TS));
 
 char spaces[16]="                ";
 
-static void
-filetonext()
+static void filetonext(void)
 {
-register int row, col;
-register char *screenp = Nextscreen;
-ULONG *longscreenp;
-LPTR memp;
-LPTR save;			/* save pos. in case line won't fit */
-register char *endscreen;
-register char *nextrow;
-char extra[16];
-char *pextra;
-//int nextra = 0;
-char nextra = 0;
-register char c;
-int n;
-int done;
-int srow;		/* starting row of the current line */
+    register int row, col;
+    register char *screenp = Nextscreen;
+    ULONG *longscreenp;
+    LPTR memp;
+    LPTR save;            /* save pos. in case line won't fit */
+    register char *endscreen;
+    register char *nextrow;
+    char extra[16];
+    char *pextra;
+    int nextra = 0;
+    /* char nextra = 0; */
+    register char c;
+    int n;
+    int done;
+    int srow;        /* starting row of the current line */
 
-save = memp = *Topchar;
+    save = memp = *Topchar;
 
-/* The number of rows shown is Rows-1. */
-/* The last line is the status/command line. */
-endscreen = &screenp[(Rows - 1) * Columns];
+    /* The number of rows shown is Rows-1. */
+    /* The last line is the status/command line. */
+    endscreen = &screenp[(Rows - 1) * Columns];
 
-srow = done = row = col = 0;
-while ( screenp < endscreen && !done)
-{
+    srow = done = row = col = 0;
+    c = 0;
+    pextra = NULL;
+    while (screenp < endscreen && !done) {
 
-    /* Get the next character to put on the screen. */
+        /* Get the next character to put on the screen. */
 
-    /* The 'extra' array contains the extra stuff that is */
-    /* inserted to represent special characters (tabs, and */
-    /* other non-printable stuff.  The order in the 'extra' */
-    /* array is reversed. */
+        /* The 'extra' array contains the extra stuff that is */
+        /* inserted to represent special characters (tabs, and */
+        /* other non-printable stuff.  The order in the 'extra' */
+        /* array is reversed. */
 
-    if ( nextra > 0 )
-        //c = extra[--nextra];
-        c = pextra[--nextra];
-    else
-    {
-        c = (unsigned)(gchar(&memp));
-        if (inc(&memp) == -1)
-            done = 1;
-        /* when getting a character from the file, we */
-        /* may have to turn it into something else on */
-        /* the way to putting it into 'Nextscreen'. */
-        if ( c == TAB && !P(P_LS) )
-        {
-            //strcpy(extra,"        ");
-            pextra = spaces;
-            /* tab amount depends on current column */
-            //Setcolor(BGND, 0xf00);
-            //nextra = ((P(P_TS)-1) - col%P(P_TS));
-            nextra = tabstops[col];
-            //Setcolor(BGND, 0x0ff);
-            c = ' ';
+        if (nextra > 0)
+            /* c = extra[--nextra]; */
+            c = pextra[--nextra];
+        else {
+            c = (char) (gchar(&memp));
+            if (inc(&memp) == -1)
+                done = 1;
+            /* when getting a character from the file, we */
+            /* may have to turn it into something else on */
+            /* the way to putting it into 'Nextscreen'. */
+            if (c == TAB && !P(P_LS)) {
+                /* strcpy(extra,"        "); */
+                pextra = spaces;
+                /* tab amount depends on current column */
+                /* Setcolor(BGND, 0xf00); */
+                /* nextra = ((P(P_TS)-1) - col%P(P_TS)); */
+                nextra = (unsigned char) tabstops[col];
+                /* Setcolor(BGND, 0x0ff); */
+                c = ' ';
+            } else if (c == NUL && P(P_LS)) {
+                pextra = extra;
+                extra[0] = NUL;
+                nextra = 1;
+                c = '$';
+            } else if ((n = (int)chars[(int)c].ch_size) > 1) {
+                char *p;
+                pextra = extra;
+                nextra = 0;
+                p = chars[(int)c].ch_str;
+                /* copy 'ch-str'ing into 'extra' in reverse */
+                while (n > 1)
+                    extra[nextra++] = p[--n];
+                c = p[0];
+            }
         }
-        else if ( c == NUL && P(P_LS) )
-        {
-            pextra = extra;
-            extra[0] = NUL;
-            nextra = 1;
-            c = '$';
-        }
-        else if ( (n = chars[c].ch_size) > 1 )
-        {
-            char *p;
-            pextra = extra;
-            nextra = 0;
-            p = chars[c].ch_str;
-            /* copy 'ch-str'ing into 'extra' in reverse */
-            while ( n > 1 )
-                extra[nextra++] = p[--n];
-            c = p[0];
-        }
-    }
 
-    if ( c == NUL )
-    {
-        srow = ++row;
-        /*
-         * Save this position in case the next line won't
-         * fit on the screen completely.
-         */
-        save = memp;
-        /* get pointer to start of next row */
-        nextrow = &Nextscreen[row * Columns];
-        /* blank out the rest of this row */
-        while ( screenp != nextrow )
-            *screenp++ = ' ';
-        col = 0;
-        continue;
+        if (c == NUL) {
+            srow = ++row;
+            /*
+             * Save this position in case the next line won't
+             * fit on the screen completely.
+             */
+            save = memp;
+            /* get pointer to start of next row */
+            nextrow = &Nextscreen[row * Columns];
+            /* blank out the rest of this row */
+            while (screenp != nextrow)
+                *screenp++ = ' ';
+            col = 0;
+            continue;
+        }
+        if (col >= Columns) {
+            row++;
+            col = 0;
+        }
+        /* store the character in Nextscreen */
+        *screenp++ = c;
+        col++;
     }
-    if ( col >= Columns )
-    {
-        row++;
-        col = 0;
-    }
-    /* store the character in Nextscreen */
-    *screenp++ = c;
-    col++;
-}
-Setcolor(BGND, 0xf00);
+    (void) Setcolor(BGND, 0xf00);
 
 /*
  * If we didn't hit the end of the file, and we didn't finish
  * the last line we were working on, then the line didn't fit.
  */
-if (!done && c != NUL)
-{
-    /*
-     * Clear the rest of the screen and mark the unused lines.
-     */
-    longscreenp = (ULONG *)&Nextscreen[srow * Columns];
-    screenp = &Nextscreen[srow * Columns];
-    while ((char *)longscreenp < endscreen)
-        *longscreenp++ = 0x20202020; //4 spaces
-    for (; srow < (Rows - 1) ; srow++)
-    {
-        *screenp = '@';
-        screenp = screenp + Columns;
+    if (!done && c != NUL) {
+        /*
+         * Clear the rest of the screen and mark the unused lines.
+         */
+        longscreenp = (ULONG *) &Nextscreen[srow * Columns];
+        screenp = &Nextscreen[srow * Columns];
+        while ((char *) longscreenp < endscreen)
+            *longscreenp++ = 0x20202020; /* 4 spaces */
+        for (; srow < (Rows - 1); srow++) {
+            *screenp = '@';
+            screenp = screenp + Columns;
+        }
+        *Botchar = save;
+        return;
     }
-    *Botchar = save;
-    return;
-}
 /* make sure the rest of the screen is blank */
-longscreenp = (ULONG *)screenp;
-while ( (char *)longscreenp < endscreen )
-    *longscreenp++ = 0x20202020; //4 spaces
+    longscreenp = (ULONG *) screenp;
+    while ((char *) longscreenp < endscreen)
+        *longscreenp++ = 0x20202020; /* 4 spaces */
 /* put '~'s on rows that aren't part of the file. */
-if ( col != 0 )
-    row++;
-screenp = &Nextscreen[row*Columns];
-while ( row < Rows )
-{
-    *screenp = '~';
-    screenp = screenp + Columns;
-    row++;
-}
-if (done)	/* we hit the end of the file */
-    *Botchar = *Fileend;
-else
-    *Botchar = memp;
+    if (col != 0)
+        row++;
+    screenp = &Nextscreen[row * Columns];
+    while (row < Rows) {
+        *screenp = '~';
+        screenp = screenp + Columns;
+        row++;
+    }
+    if (done)    /* we hit the end of the file */
+        *Botchar = *Fileend;
+    else
+        *Botchar = memp;
 }
 
 /*
@@ -228,8 +215,7 @@ else
  * Transfer the contents of Nextscreen to the screen, using Realscreen
  * to avoid unnecessary output.
  */
-static void
-nexttoscreen()
+static void nexttoscreen(void)
 {
     register char *np = Nextscreen;
     register char *rp = Realscreen;
@@ -275,10 +261,11 @@ nexttoscreen()
     outstr(T_CV);		/* enable cursor again */
 }
 
+#ifndef __PUREC__
 /*
  * Like the routine above, but without using TOS calls
  */
-void nexttoscreen_fast()
+void nexttoscreen_fast(void)
 {
     __asm__ (""
              "           movem.l %d0-%a6,-(%sp)                                                        \n\t"
@@ -346,7 +333,7 @@ void nexttoscreen_fast()
              "           movem.l (%sp)+,%d0-%a6                                                        \n\t"
              "");
 }
-
+#endif
 /*
  * lfiletonext() - like filetonext() but only for cursor line
  *
@@ -354,8 +341,7 @@ void nexttoscreen_fast()
  * This determines whether or not we need to call filetonext() to examine
  * the entire screen for changes.
  */
-static bool_t
-lfiletonext()
+static bool_t lfiletonext(void)
 {
     register int row, col;
     register char *screenp;
@@ -400,9 +386,9 @@ lfiletonext()
             {
                 strcpy(extra, "        ");
                 /* tab amount depends on current column */
-                Setcolor(BGND, 0xf00);
+                (void) Setcolor(BGND, 0xf00);
                 nextra = ((P(P_TS) - 1) - col % P(P_TS));
-                Setcolor(BGND, 0x0ff);
+                (void) Setcolor(BGND, 0x0ff);
                 c = ' ';
             }
             else if ( c == NUL && P(P_LS) )
@@ -452,8 +438,7 @@ lfiletonext()
  *
  * Like nexttoscreen() but only for the cursor line.
  */
-static void
-lnexttoscreen()
+static void lnexttoscreen(void)
 {
     register char *np = Nextscreen + (Cline_row * Columns);
     register char *rp = Realscreen + (Cline_row * Columns);
@@ -513,8 +498,7 @@ lnexttoscreen()
  * lfiletonext() returns FALSE, the size of the cursor line (in rows)
  * has changed and we have to call updatescreen() to do a complete job.
  */
-void
-updateline()
+void updateline(void)
 {
     if (!lfiletonext())
         updatescreen();		/* bag it, do the whole screen */
@@ -522,30 +506,28 @@ updateline()
         lnexttoscreen();
 }
 
-void
-updatescreen()
+void updatescreen(void)
 {
 
-    int	text, bgnd;		/* text and background colors */
+    int	bgnd;		/* text and background colors */
 
     bgnd = Setcolor(BGND, -1);
-    Vsync();
+    /* Vsync(); */
 
-    Setcolor(BGND, 0x0ff);
+    (void) Setcolor(BGND, 0x0ff);
 
     filetonext();
 
-    Setcolor(BGND, 0x00f);
+    (void) Setcolor(BGND, 0x00f);
 
     nexttoscreen();
-    //nexttoscreen_fast();
+    /* nexttoscreen_fast(); */
 
-    Setcolor(BGND, bgnd);
+    (void) Setcolor(BGND, bgnd);
 
 }
 
-void
-screenclear()
+void screenclear(void)
 {
     register char	*rp, *np;
     register char	*end;
@@ -561,13 +543,14 @@ screenclear()
         *rp++ = *np++ = ' ';
 }
 
-void
-cursupdate()
+void cursupdate(void)
 {
     LPTR *p;
     int inc, c, nlines;
     int i;
     int didinc;
+
+    didinc = inc = c = 0;
 
     if (bufempty())  		/* special case - file is empty */
     {
@@ -677,10 +660,7 @@ cursupdate()
 /*
  * s_ins(row, nlines) - insert 'nlines' lines at 'row'
  */
-void
-s_ins(row, nlines)
-int	row;
-int	nlines;
+void s_ins(int row, int nlines)
 {
     register char	*s, *d;		/* src & dest for block copy */
     register char	*e;		/* end point for copy */
@@ -726,10 +706,7 @@ int	nlines;
 /*
  * s_del(row, nlines) - delete 'nlines' lines at 'row'
  */
-void
-s_del(row, nlines)
-int	row;
-int	nlines;
+void s_del(int row, int nlines)
 {
     register char	*s, *d, *e;
     register int	i;
@@ -764,4 +741,3 @@ int	nlines;
     while (d < e)		/* clear the lines at the bottom */
         *d++ = ' ';
 }
-

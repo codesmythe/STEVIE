@@ -15,10 +15,9 @@ static	int	helprow;
 
 #ifdef	HELP
 
-static	void	longline();
+static void longline(char *p);
 
-bool_t
-help()
+bool_t help(void)
 {
 
     /***********************************************************************
@@ -279,9 +278,7 @@ help()
     return TRUE;
 }
 
-static void
-longline(p)
-char *p;
+static void longline(char *p)
 {
     char *s;
 

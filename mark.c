@@ -8,7 +8,7 @@
  */
 
 #include "stevie.h"
-
+#include <ctype.h>
 /*
  * This file contains routines to maintain and manipulate marks.
  */
@@ -30,9 +30,7 @@ static	bool_t	pcvalid = FALSE;	/* true if pcmark is valid */
  *
  * Returns TRUE on success, FALSE if no room for mark or bad name given.
  */
-bool_t
-setmark(c)
-char	c;
+bool_t setmark(char c)
 {
     int	i;
 
@@ -70,8 +68,7 @@ char	c;
 /*
  * setpcmark() - set the previous context mark to the current position
  */
-void
-setpcmark()
+void setpcmark(void)
 {
     pcmark.pos = *Curschar;
     pcvalid = TRUE;
@@ -82,9 +79,7 @@ setpcmark()
  *
  * Return pointer to LPTR or NULL if no such mark.
  */
-LPTR *
-getmark(c)
-char	c;
+LPTR *getmark(char c)
 {
     register int	i;
 
@@ -104,8 +99,7 @@ char	c;
  *
  * Used mainly when trashing the entire buffer during ":e" type commands
  */
-void
-clrall()
+void clrall(void)
 {
     register int	i;
 
@@ -120,9 +114,7 @@ clrall()
  * Used any time a line is deleted so we don't have marks pointing to
  * non-existent lines.
  */
-void
-clrmark(line)
-LINE	*line;
+void clrmark(LINEX *line)
 {
     register int	i;
 

@@ -24,9 +24,7 @@
  * Decrement the line pointer 'p' crossing line boundaries as necessary.
  * Return 1 when crossing a line, -1 when at start of file, 0 otherwise.
  */
-int
-dec(lp)
-register LPTR	*lp;
+int dec(LPTR *lp)
 {
 	if (lp->index > 0) {			/* still within line */
 		lp->index--;
@@ -46,10 +44,7 @@ register LPTR	*lp;
 /*
  * pchar(lp, c) - put character 'c' at position 'lp'
  */
-void
-pchar(lp, c)
-register LPTR	*lp;
-char	c;
+void pchar(LPTR *lp, char c)
 {
 	lp->linep->s[lp->index] = c;
 }
@@ -57,9 +52,7 @@ char	c;
 /*
  * pswap(a, b) - swap two position pointers
  */
-void
-pswap(a, b)
-register LPTR	*a, *b;
+void pswap(LPTR *a, LPTR *b)
 {
 	LPTR	tmp;
 
@@ -72,9 +65,7 @@ register LPTR	*a, *b;
  * Position comparisons
  */
 
-bool_t
-lt(a, b)
-register LPTR	*a, *b;
+bool_t lt(LPTR *a, LPTR *b)
 {
 	register int an, bn;
 
@@ -87,9 +78,7 @@ register LPTR	*a, *b;
 		return (a->index < b->index);
 }
 
-bool_t
-gt(a, b)
-LPTR	*a, *b;
+bool_t gt(LPTR *a, LPTR *b)
 {
 	register int an, bn;
 
@@ -102,23 +91,17 @@ LPTR	*a, *b;
 		return (a->index > b->index);
 }
 
-bool_t
-equal(a, b)
-register LPTR	*a, *b;
+bool_t equal(LPTR *a, LPTR *b)
 {
 	return (a->linep == b->linep && a->index == b->index);
 }
 
-bool_t
-ltoreq(a, b)
-register LPTR	*a, *b;
+bool_t ltoreq(LPTR *a, LPTR *b)
 {
 	return (lt(a, b) || equal(a, b));
 }
 
-bool_t
-gtoreq(a, b)
-LPTR	*a, *b;
+bool_t gtoreq(LPTR *a, LPTR *b)
 {
 	return (gt(a, b) || equal(a, b));
 }

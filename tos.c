@@ -13,8 +13,14 @@
 
 #include "stevie.h"
 
+#ifdef __PUREC__
+#include <tos.h>
+#else
 #include <osbind.h>
-void beep();
+#endif
+
+static void get_inchars(void);
+static void vbeep(void);
 
 /*
  * Physical screen address
@@ -50,8 +56,7 @@ static long *inptr = inbuf;	/* where to put next character */
  * loop when any unknown key is seen. Normally, the bell is rung to
  * indicate the error. If the "bug" value is seen, we ignore it completely.
  */
-int
-inchar()
+int inchar(void)
 {
 	for (;;) {
 		long c, *p;
@@ -111,8 +116,7 @@ inchar()
  *
  * If the buffer overflows, we discard what's left and ring the bell.
  */
-static void
-get_inchars()
+static void get_inchars(void)
 {
 	while (Cconis()) {
 		if (inptr >= &inbuf[IBUFSZ]) {	/* no room in buffer? */
@@ -123,20 +127,16 @@ get_inchars()
 	}
 }
 
-void
-outchar(c)
-char	c;
+void outchar(char c)
 {
 	get_inchars();
 	Cconout(c);
 }
 
-void
-outstr(s)
-register char	*s;
+void outstr(char *s)
 {
 	get_inchars();
-	Cconws(s);
+	(void) Cconws(s);
 }
 
 #define	BGND	0
@@ -145,28 +145,25 @@ register char	*s;
 /*
  * vbeep() - visual bell
  */
-static void
-vbeep()
+static void vbeep(void)
 {
-	int	text, bgnd;		/* text and background colors */
-	long	l;
+    int text, bgnd;        /* text and background colors */
 
-	text = Setcolor(TEXT, -1);
-	bgnd = Setcolor(BGND, -1);
+    text = Setcolor(TEXT, -1);
+    bgnd = Setcolor(BGND, -1);
 
-Vsync();                    /* short pause */
+    /* Vsync(); */               /* short pause */
 
-Setcolor(TEXT, bgnd);		/* swap colors */
-Setcolor(BGND, text);
+    (void) Setcolor(TEXT, bgnd);        /* swap colors */
+    (void) Setcolor(BGND, text);
 
-Vsync();                    /* short pause */
+    /* Vsync(); */               /* short pause */
 
-Setcolor(TEXT, text);		/* restore colors */
-Setcolor(BGND, bgnd);
+    (void) Setcolor(TEXT, text);        /* restore colors */
+    (void) Setcolor(BGND, bgnd);
 }
 
-void
-beep()
+void beep(void)
 {
     if (P(P_VB))
         vbeep();
@@ -174,8 +171,7 @@ beep()
         outchar('\007');
 }
 
-void
-windinit()
+void windinit(void)
 {
     /*
      * TODO: Yeah, this is ugly and will only work with ST resolutions
@@ -185,37 +181,32 @@ windinit()
      *       jar to detect machine and set resolution depending on the
      *       result. No cookie jar = st medium or st high.
      */
-    switch (Getrez())
-    {
-    case 0:             /* When we run it from low resolution, set medium instead */
-    {
-        Setscreen(-1L, -1L, 1);
-        Columns = 80;
-        P(P_LI) = Rows = 25;
-    }
-    break;
-    case 1:
-    {
-        Columns = 80;
-        P(P_LI) = Rows = 25;
-    }
-    break;
-    case 2:
-    {
-        Columns = 80;
-        P(P_LI) = Rows = 50;
-    }
-    break;
+    switch (Getrez()) {
+        case 0:             /* When we run it from low resolution, set medium instead */
+        {
+            Setscreen(-1L, -1L, 1);
+            Columns = 80;
+            P(P_LI) = Rows = 25;
+        }
+            break;
+        case 1: {
+            Columns = 80;
+            P(P_LI) = Rows = 25;
+        }
+            break;
+        case 2: {
+            Columns = 80;
+            P(P_LI) = Rows = 50;
+        }
+            break;
     }
 
     phys = Physbase();
 
-    Cursconf((short)1, (short)0);
+    (void) Cursconf((short) 1, (short) 0);
 }
 
-void
-windexit(r)
-int r;
+void windexit(int r)
 {
     /*
      * TODO: restore resolution here
@@ -223,9 +214,7 @@ int r;
     exit(r);
 }
 
-void
-windgoto(r, c)
-int	r, c;
+void windgoto(int r, int c)
 {
     outstr("\033Y");
     outchar(r + 040);
@@ -236,9 +225,7 @@ int	r, c;
  * System calls or library routines missing in TOS.
  */
 
-void
-sleep(n)
-int n;
+void sleep(int n)
 {
     int k;
 
@@ -247,8 +234,7 @@ int n;
         ;
 }
 
-void
-delay()
+void my_delay(void)
 {
     long	n;
 
@@ -256,10 +242,7 @@ delay()
         ;
 }
 
-FILE *
-fopenb(fname, mode)
-char	*fname;
-char	*mode;
+FILE *fopenb(char *fname, char *mode)
 {
     char	modestr[10];
 

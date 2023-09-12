@@ -15,7 +15,7 @@ set (CRT0 /opt/cross-mint/m68k-atari-mint/sys-root/usr/lib/crt0.o)
 
 add_executable(${TARGET} ${SOURCES})
 
-#target_compile_options(${TARGET} PUBLIC -std=c99 -O2 -pedantic -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter)
+target_compile_options(${TARGET} PUBLIC -std=c99 -O2 -pedantic -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter)
 target_include_directories(${TARGET} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_directories(${TARGET} PUBLIC /opt/cross-mint/lib/gcc/m68k-atari-mint/4.6.4)
 target_link_libraries(${TARGET} PUBLIC gcc c gcc)

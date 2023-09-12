@@ -9,8 +9,8 @@
 
 #include "stevie.h"
 
-static void openfwd();
-static void openbwd();
+static void openfwd(int can_ai);
+static void openbwd(int can_ai);
 
 /*
  * opencmd
@@ -28,7 +28,7 @@ void opencmd(int dir, int can_ai /* if true, consider auto-indent */)
 
 static void openfwd(int can_ai)
 {
-	LINE	*l;
+	LINEX	*l;
 	LPTR	*next;
 	char	*s;		/* string to be moved to new line, if any */
 
@@ -49,7 +49,7 @@ static void openfwd(int can_ai)
 	 * By asking for as much space as the prior line had we make sure
 	 * that we'll have enough space for any auto-indenting.
 	 */
-	if ((l = newline(strlen(Curschar->linep->s) + SLOP)) == NULL)
+	if ((l = newline((int) strlen(Curschar->linep->s) + SLOP)) == NULL)
 		return;
 
 	if (*s != NUL)
@@ -97,49 +97,47 @@ static void openfwd(int can_ai)
 
 static void openbwd(int can_ai)
 {
-	LINE	*l;
-	LPTR	*prev;
+    LINEX *l;
+    LPTR *prev;
 
-	prev = prevline(Curschar);
+    prev = prevline(Curschar);
 
-	if ((l = newline(strlen(Curschar->linep->s) + SLOP)) == NULL)
-		return;
+    if ((l = newline((int) strlen(Curschar->linep->s) + SLOP)) == NULL)
+        return;
 
-	Curschar->linep->prev = l;	/* link neighbors to new line */
-	if (prev != NULL)
-		prev->linep->next = l;
+    Curschar->linep->prev = l;    /* link neighbors to new line */
+    if (prev != NULL)
+        prev->linep->next = l;
 
-	l->next = Curschar->linep;	/* link new line to neighbors */
-	if (prev != NULL)
-		l->prev = prev->linep;
+    l->next = Curschar->linep;    /* link new line to neighbors */
+    if (prev != NULL)
+        l->prev = prev->linep;
 
 #if 0
-if (can_ai && P(P_AI))
-{
-    did_ai = TRUE;
-}
+    if (can_ai && P(P_AI))
+    {
+        did_ai = TRUE;
+    }
 #endif
 
-*Curschar = *prevline(Curschar);	/* cursor moves up */
-Curschar->index = 0;
+    *Curschar = *prevline(Curschar);    /* cursor moves up */
+    Curschar->index = 0;
 
-if (prev == NULL)			/* new start of file */
-    Filemem->linep = l;
+    if (prev == NULL)            /* new start of file */
+        Filemem->linep = l;
 
-renum();	/* keep it simple - we don't do this often */
+    renum();    /* keep it simple - we don't do this often */
 
-cursupdate();			/* update Cursrow before insert */
-if (Cursrow != 0)
-    s_ins(Cursrow, 1);		/* insert a physical line */
+    cursupdate();            /* update Cursrow before insert */
+    if (Cursrow != 0)
+        s_ins(Cursrow, 1);        /* insert a physical line */
 
-updatescreen();
+    updatescreen();
 }
 
-int
-cntllines(pbegin, pend)
-LPTR *pbegin, *pend;
+int cntllines(LPTR *pbegin, LPTR *pend)
 {
-    LINE *lp;
+    LINEX *lp;
     int lnum = 1;
 
     for (lp = pbegin->linep; lp != pend->linep ; lp = lp->next)
@@ -151,9 +149,7 @@ LPTR *pbegin, *pend;
 /*
  * plines(p) - return the number of physical screen lines taken by line 'p'
  */
-int
-plines(p)
-LPTR	*p;
+int plines(LPTR *p)
 {
     register int	col;
     register char	*s;
@@ -179,8 +175,7 @@ LPTR	*p;
     return ((col + (Columns - 1)) / Columns);
 }
 
-void
-fileinfo()
+void fileinfo(void)
 {
     long	l1, l2;
     char	buf[80];
@@ -206,9 +201,7 @@ fileinfo()
  * Returns a pointer to the last line of the file if n is zero, or
  * beyond the end of the file.
  */
-LPTR *
-gotoline(n)
-int n;
+LPTR *gotoline(int n)
 {
     static	LPTR	l;
 
@@ -227,9 +220,7 @@ int n;
     return &l;
 }
 
-void
-inschar(c)
-int	c;
+void inschar(int c)
 {
     register char	*p, *pend;
 
@@ -243,7 +234,7 @@ int	c;
     for (; p > pend ; p--)
         *p = *(p - 1);
 
-    *p = c;
+    *p = (char) c;
 
     /*
      * If we're in insert mode and showmatch mode is set, then
@@ -264,7 +255,7 @@ int	c;
             *Curschar = *lpos;	/* move to matching char */
             cursupdate();
             windgoto(Cursrow, Curscol);
-            delay();		/* brief pause */
+            my_delay();		/* brief pause */
             *Curschar = csave;	/* restore cursor position */
             cursupdate();
         }
@@ -274,12 +265,10 @@ int	c;
     CHANGED;
 }
 
-void
-insstr(s)
-register char *s;
+void insstr(char *s)
 {
     register char *p, *endp;
-    register int k, n = strlen(s);
+    register int k, n = (int) strlen(s);
 
     /* Move everything in the file over to make */
     /* room for the new string. */
@@ -301,9 +290,7 @@ register char *s;
     CHANGED;
 }
 
-bool_t
-delchar(fixpos)
-bool_t	fixpos;		/* if TRUE, fix the cursor position when done */
+bool_t delchar(bool_t fixpos) /* if TRUE, fix the cursor position when done */
 {
     register int i;
 
@@ -332,10 +319,9 @@ bool_t	fixpos;		/* if TRUE, fix the cursor position when done */
 }
 
 
-void
-delline(nlines)
+void delline(int nlines)
 {
-    register LINE *p, *q;
+    register LINEX *p, *q;
     int	doscreen = TRUE;	/* if true, update the screen */
 
     /*

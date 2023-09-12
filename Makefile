@@ -2,7 +2,7 @@
 # Makefile for the Atari ST - gcc Compiler
 #
 
-CFLAGS = -O2 -fomit-frame-pointer
+CFLAGS = -std=c99 -O2 -pedantic -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter
 CC = m68k-atari-mint-gcc-4.6.4
 STRIP = m68k-atari-mint-strip
 ODIR = obj

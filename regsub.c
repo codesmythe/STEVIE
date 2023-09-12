@@ -19,6 +19,7 @@
  *		be misrepresented as being the original software.
  */
 #include <stdio.h>
+#include <string.h>
 #include <regexp.h>
 #include "regmagic.h"
 
@@ -31,18 +32,13 @@
 /*
  - regsub - perform substitutions after a regexp match
  */
-void
-regsub(prog, source, dest)
-regexp *prog;
-char *source;
-char *dest;
+void regsub(regexp *prog, char *source, char *dest)
 {
     register char *src;
     register char *dst;
     register char c;
     register int no;
     register int len;
-    extern char *strncpy();
 
     if (prog == NULL || source == NULL || dest == NULL)
     {
